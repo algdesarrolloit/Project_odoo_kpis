@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal KPIs - Proyecto Odoo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+    min-height: 100vh;
+}
+.container { max-width: 1800px; margin: 0 auto; }
+
+.header {
+    background: white;
+    padding: 20px 40px;
+    border-radius: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.header-left { display: flex; align-items: center; gap: 20px; }
+.header-logo { width: 60px; height: 60px; object-fit: contain; }
+.header-text h1 { color: #333; font-size: 1.8em; }
+.header-text p { color: #666; font-size: 0.95em; }
+.header-right { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-primary { background: #667eea; color: white; }
+.btn-primary:hover { background: #764ba2; }
+.btn-success { background: #27ae60; color: white; }
+.btn-success:hover { background: #219a52; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-warning:hover { background: #e67e22; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-danger:hover { background: #c0392b; }
+.btn-secondary { background: #95a5a6; color: white; }
+.btn-secondary:hover { background: #7f8c8d; }
+
+/* Tabs compactos */
+.tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: white;
+    padding: 6px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.tab-btn {
+    flex: 1;
+    padding: 10px 15px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #666;
+    transition: all 0.3s;
+}
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+.tab-btn:hover:not(.active) { background: #f0f0f0; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.table-container {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.table-header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 18px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.table-header h2 { font-size: 1.3em; }
+.table-scroll { overflow-x: auto; max-height: 70vh; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+thead { position: sticky; top: 0; z-index: 10; }
+th {
+    background: #667eea;
+    color: white;
+    padding: 12px 10px;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+}
+td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+    vertical-align: middle;
+}
+tr:hover { background: #f8f9ff; }
+
+tr.section-row {
+    background: #e8f0fe;
+    font-weight: 700;
+}
+tr.section-row td {
+    padding: 12px 10px;
+    border-bottom: 2px solid #667eea;
+}
+
+td[contenteditable="true"] {
+    cursor: text;
+    transition: background 0.2s;
+}
+td[contenteditable="true"]:hover { background: #fff9e6; }
+td[contenteditable="true"]:focus {
+    background: #fff3cd;
+    outline: 2px solid #f39c12;
+    outline-offset: -2px;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    white-space: nowrap;
+    display: inline-block;
+}
+.status-completed { background: #d4edda; color: #155724; }
+.status-progress { background: #fff3cd; color: #856404; }
+.status-pending { background: #f8d7da; color: #721c24; }
+
+.progress-bar-mini {
+    width: 100%;
+    height: 14px;
+    background: #e0e0e0;
+    border-radius: 7px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.progress-fill-mini {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.7em;
+    font-weight: bold;
+}
+
+.action-btn {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8em;
+    margin: 0 2px;
+}
+.action-btn.delete { background: #e74c3c; color: white; }
+.action-btn.delete:hover { background: #c0392b; }
+
+/* KPIs Dashboard con TOOLTIPS */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+.kpi-card {
+    background: white;
+    padding: 22px 18px;
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    border-top: 4px solid #7EB5D6;
+    text-align: center;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    cursor: help;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+.kpi-card h3 {
+    color: #555;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.kpi-value {
+    font-size: 2.2em;
+    font-weight: bold;
+    color: #7EB5D6;
+    margin-bottom: 4px;
+}
+.kpi-label { color: #999; font-size: 0.75em; }
+.kpi-card.alert { border-top-color: #e74c3c; }
+.kpi-card.alert .kpi-value { color: #e74c3c; }
+.kpi-card.purple { border-top-color: #B8A9C9; }
+.kpi-card.purple .kpi-value { color: #B8A9C9; }
+
+.kpi-card .tooltip-text {
+    visibility: hidden;
+    width: 280px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 12px 15px;
+    position: absolute;
+    z-index: 100;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -140px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.82em;
+    font-weight: normal;
+    line-height: 1.4;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+.kpi-card .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+.kpi-card:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.chart-box {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
+    position: relative;
+}
+.chart-box h3 { 
+    color: #333; 
+    margin-bottom: 15px; 
+    font-size: 1.2em; 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: help;
+    position: relative;
+}
+.chart-box h3 .info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    font-size: 0.7em;
+    font-weight: bold;
+    font-style: normal;
+}
+.chart-box canvas { max-height: 300px; }
+
+.chart-box .tooltip-box {
+    visibility: hidden;
+    width: 300px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 8px;
+    padding: 12px 15px;
+    position: absolute;
+    z-index: 100;
+    top: 60px;
+    right: 20px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.85em;
+    font-weight: normal;
+    line-height: 1.5;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+.chart-box .tooltip-box::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    right: 30px;
+    border-width: 0 10px 10px 10px;
+    border-style: solid;
+    border-color: transparent transparent #333 transparent;
+}
+.chart-box:hover .tooltip-box {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Alertas y Riesgos */
+.alertas-box {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
+}
+.alertas-box h3 { color: #333; margin-bottom: 15px; font-size: 1.2em; }
+.alerta-item {
+    background: #f8d7da;
+    border-left: 5px solid #e74c3c;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+.alerta-item.success { background: #d4edda; border-left-color: #27ae60; }
+.alerta-item.warning { background: #fff3cd; border-left-color: #f39c12; }
+
+/* Filtros de tareas */
+.filter-section {
+    background: white;
+    padding: 18px 20px;
+    border-radius: 15px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+.filter-section h3 { margin-bottom: 12px; color: #333; font-size: 1.1em; }
+.filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+.filter-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 20px;
+    background: #667eea;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.85em;
+}
+.filter-btn:hover { background: #764ba2; transform: scale(1.05); }
+.filter-btn.active { background: #27ae60; }
+
+/* Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal h2 { color: #333; margin-bottom: 20px; }
+.form-group { margin-bottom: 15px; }
+.form-group label {
+    display: block;
+    color: #555;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+}
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95em;
+    transition: border 0.3s;
+}
+.form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #27ae60;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    z-index: 2000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+}
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+.toast.error { background: #e74c3c; }
+.toast.warning { background: #f39c12; }
+
+@media (max-width: 1200px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; gap: 15px; }
+    .header-right { justify-content: center; }
+    .tabs { max-width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-left">
+            <img src="odoo.png" alt="Odoo Logo" class="header-logo">
+            <div class="header-text">
+                <h1>KPIs - Odoo Project</h1>
+                <p>Seguimiento y Control de Indicadores Clave | Gestión de Tareas</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn btn-primary" onclick="exportarJSON()">📥 Exportar</button>
+            <button class="btn btn-warning" onclick="document.getElementById('importFile').click()">📤 Importar</button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importarJSON(event)">
+            <button class="btn btn-danger" onclick="resetearDatos()">🔄 Resetear</button>
+        </div>
+    </div>
+
+    <!-- Tabs compactos -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="cambiarTab('tabla', this)">📋 Tabla de Tareas</button>
+        <button class="tab-btn" onclick="cambiarTab('dashboard', this)"> Dashboard KPIs</button>
+    </div>
+
+    <!-- TAB: TABLA EDITABLE -->
+    <div id="tab-tabla" class="tab-content active">
+        <div class="table-container">
+            <div class="table-header">
+                <h2>📋 Gestión de Tareas del Proyecto</h2>
+                <button class="btn btn-success" onclick="abrirModal()">➕ Agregar Tarea</button>
+            </div>
+            <div class="table-scroll">
+                <table id="tabla-tareas">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th style="min-width:350px">Nombre de Tarea</th>
+                            <th style="width:110px">Duración (días hábiles)</th>
+                            <th style="width:110px">% Completado</th>
+                            <th style="width:120px">Inicio</th>
+                            <th style="width:120px">Fin</th>
+                            <th style="min-width:180px">Responsables</th>
+                            <th style="width:100px">Estado</th>
+                            <th style="width:60px">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-tareas"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: DASHBOARD KPIs -->
+    <div id="tab-dashboard" class="tab-content">
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <h3>📈 SPI Cronograma</h3>
+                <div class="kpi-value" id="kpi-spi">0.00</div>
+                <div class="kpi-label">&gt;1 Adelantado | &lt;1 Retrasado</div>
+                <span class="tooltip-text"><strong>Índice de Desempeño del Cronograma (SPI)</strong><br>Mide la eficiencia del avance respecto al plan. SPI &gt; 1 = adelantado, SPI = 1 = en tiempo, SPI &lt; 1 = retrasado.</span>
+            </div>
+            <div class="kpi-card">
+                <h3>✅ Completadas</h3>
+                <div class="kpi-value" id="kpi-completadas">0</div>
+                <div class="kpi-label" id="label-completadas">de 0 tareas</div>
+                <span class="tooltip-text"><strong>Tareas Completadas</strong><br>Cantidad de actividades con 100% de avance. Representa el trabajo finalizado del proyecto.</span>
+            </div>
+            <div class="kpi-card">
+                <h3>⚙️ En Progreso</h3>
+                <div class="kpi-value" id="kpi-progreso-tareas">0</div>
+                <div class="kpi-label">Tareas activas</div>
+                <span class="tooltip-text"><strong>Tareas En Progreso</strong><br>Actividades con avance entre 1% y 99%. Indica la carga de trabajo activa del equipo.</span>
+            </div>
+            <div class="kpi-card">
+                <h3>⏳ Pendientes</h3>
+                <div class="kpi-value" id="kpi-pendientes">0</div>
+                <div class="kpi-label">Por iniciar</div>
+                <span class="tooltip-text"><strong>Tareas Pendientes</strong><br>Actividades con 0% de avance que aún no han comenzado. Representa el trabajo futuro por ejecutar.</span>
+            </div>
+            <div class="kpi-card">
+                <h3>📅 Días Transcurridos</h3>
+                <div class="kpi-value" id="kpi-dias">0</div>
+                <div class="kpi-label">Desde inicio</div>
+                <span class="tooltip-text"><strong>Días Transcurridos</strong><br>Tiempo calendario transcurrido desde el inicio del proyecto (04/05/2026) hasta la fecha actual.</span>
+            </div>
+            <div class="kpi-card">
+                <h3>🎯 Go-Live</h3>
+                <div class="kpi-value" style="font-size:1.4em">15 Ene 2027</div>
+                <div class="kpi-label">Fecha planificada</div>
+                <span class="tooltip-text"><strong>Fecha Go-Live</strong><br>Fecha objetivo para la salida a producción del sistema Odoo. Marca el hito final del proyecto.</span>
+            </div>
+            <div class="kpi-card alert">
+                <h3>🚨 Alerta Crítica</h3>
+                <div class="kpi-value" id="kpi-riesgo">0</div>
+                <div class="kpi-label">Tareas vencidas</div>
+                <span class="tooltip-text"><strong>Alerta Crítica</strong><br>Cantidad de tareas que superaron su fecha de fin planificada sin estar completadas al 100%. Requieren atención inmediata.</span>
+            </div>
+            <div class="kpi-card purple">
+                <h3>🎯 AVANCE TOTAL GLOBAL</h3>
+                <div class="kpi-value" id="kpi-avance-total">0%</div>
+                <div class="kpi-label">Promedio de 6 segmentos</div>
+                <span class="tooltip-text"><strong>Avance Total Global</strong><br>Promedio ponderado del % de avance de los 6 segmentos del proyecto. Refleja el progreso general consolidado.</span>
+            </div>
+        </div>
+
+        <!-- Gráfico Progreso por Fase -->
+        <div class="chart-box">
+            <h3>📈 Progreso por Fase (Promedio Ponderado por Segmento) <i class="info-icon">?</i></h3>
+            <div class="tooltip-box">
+                <strong>Progreso por Fase</strong><br>
+                Muestra el % promedio de avance de cada uno de los 6 segmentos del proyecto. El valor se calcula promediando el % completado de todas las tareas individuales dentro de cada categoría.
+            </div>
+            <canvas id="chartFases"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <h3> Estado de Tareas <i class="info-icon">?</i></h3>
+            <div class="tooltip-box">
+                <strong>Estado de Tareas</strong><br>
+                Distribución visual del total de tareas según su estado actual: Completadas (100%), En Progreso (1%-99%) y Pendientes (0%).
+            </div>
+            <canvas id="chartEstado"></canvas>
+        </div>
+
+        <!-- Alertas y Riesgos -->
+        <div class="alertas-box">
+            <h3>🚨 Alertas y Riesgos</h3>
+            <div id="alertas-container"></div>
+        </div>
+
+        <div class="chart-box">
+            <h3>👥 Distribución por Responsable <i class="info-icon">?</i></h3>
+            <div class="tooltip-box">
+                <strong>Distribución por Responsable</strong><br>
+                Muestra la cantidad de tareas asignadas a cada responsable o equipo. Permite identificar la carga de trabajo distribuida entre los miembros del proyecto (IT, Binaural, Key Users, etc.).
+            </div>
+            <canvas id="chartResponsables"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <h3>📅 Cumplimiento de Cronograma <i class="info-icon">?</i></h3>
+            <div class="tooltip-box">
+                <strong>Cumplimiento de Cronograma</strong><br>
+                Compara el avance planificado (línea punteada) versus el avance real (línea sólida) a lo largo del tiempo. Permite visualizar desviaciones entre lo esperado y lo ejecutado mes a mes.
+            </div>
+            <canvas id="chartCronograma"></canvas>
+        </div>
+
+        <!-- Detalle de Tareas con Filtros -->
+        <div class="filter-section">
+            <h3>🔍 Filtrar Tareas</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filtrarTareas('todas', this)">Todas</button>
+                <button class="filter-btn" onclick="filtrarTareas('completadas', this)">Completadas</button>
+                <button class="filter-btn" onclick="filtrarTareas('progreso', this)">En Progreso</button>
+                <button class="filter-btn" onclick="filtrarTareas('pendientes', this)">Pendientes</button>
+                <button class="filter-btn" onclick="filtrarTareas('criticas', this)">🚨 Críticas</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2>📋 Detalle de Tareas</h2>
+            </div>
+            <div class="table-scroll">
+                <table id="tabla-detalle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Tarea</th>
+                            <th>Responsable</th>
+                            <th>Duración</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Progreso</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-detalle"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Tarea -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <h2>➕ Agregar Nueva Tarea</h2>
+        <div class="form-group">
+            <label>Sección / Categoría</label>
+            <select id="formSeccion">
+                <option value="1">Resolución de Incidencias</option>
+                <option value="2">Cambios en la App de Ventas</option>
+                <option value="3">Actividades de Odoo en Proceso</option>
+                <option value="4">Próximas Actividades Odoo</option>
+                <option value="5">Pruebas / Ciclo de Validación</option>
+                <option value="6">Fechas Propuesta Go Live</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Nombre de la Tarea</label>
+            <input type="text" id="formNombre" placeholder="Ej: Desarrollo de módulo X">
+        </div>
+        <div class="form-group">
+            <label>Duración (días hábiles)</label>
+            <input type="number" id="formDuracion" value="1" min="0">
+        </div>
+        <div class="form-group">
+            <label>% Completado</label>
+            <input type="number" id="formCompletado" value="0" min="0" max="100">
+        </div>
+        <div class="form-group">
+            <label>Fecha Inicio</label>
+            <input type="date" id="formInicio">
+        </div>
+        <div class="form-group">
+            <label>Fecha Fin</label>
+            <input type="date" id="formFin">
+        </div>
+        <div class="form-group">
+            <label>Responsables</label>
+            <input type="text" id="formResponsable" placeholder="Ej: IT, Binaural">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-success" onclick="guardarTarea()">💾 Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ DATOS INICIALES DEL EXCEL ============
+const datosIniciales = [
+    { seccion: 1, nombre: "Errores continuos accesos", duracion: 27, completado: 100, inicio: "2026-06-18", fin: "2026-07-24", responsable: "Binaural" },
+    { seccion: 1, nombre: "Cambio Nota entrega x Guía despacho", duracion: 27, completado: 100, inicio: "2026-06-18", fin: "2026-07-24", responsable: "Binaural" },
+    { seccion: 1, nombre: "Correciones Libro Venta / Libro Compra", duracion: 65, completado: 100, inicio: "2026-06-18", fin: "2026-09-16", responsable: "Binaural" },
+    { seccion: 1, nombre: "Quitar el default \"Consignación\" en traslados interno", duracion: 27, completado: 100, inicio: "2026-06-18", fin: "2026-07-24", responsable: "Binaural" },
+    { seccion: 1, nombre: "Reporte de tesorería", duracion: 1, completado: 25, inicio: "2026-07-07", fin: "2026-07-07", responsable: "Binaural, Tesorería" },
+    { seccion: 1, nombre: "Reporte de logística", duracion: 26, completado: 100, inicio: "2026-06-18", fin: "2026-07-23", responsable: "Binaural" },
+    { seccion: 1, nombre: "Recibo de Pago", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "Binaural" },
+    { seccion: 1, nombre: "Presentación cambios realizados OF Premezclas", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "IT, Binaural" },
+    { seccion: 1, nombre: "Validación y aprobación Key User Cambios Orden Fabricación", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "J.Gomez, TI" },
+    
+    { seccion: 2, nombre: "N/C seleccionable aplicar a factura", duracion: 3, completado: 100, inicio: "2026-07-23", fin: "2026-07-27", responsable: "Binaural" },
+    { seccion: 2, nombre: "Flujo de retenciones", duracion: 1, completado: 100, inicio: "2026-07-23", fin: "2026-07-23", responsable: "Binaural" },
+    { seccion: 2, nombre: "Pagos", duracion: 1, completado: 100, inicio: "2026-07-23", fin: "2026-07-23", responsable: "Binaural" },
+    { seccion: 2, nombre: "Presentación Binaural cambios en la app de ventas", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "IT, Binaural" },
+    { seccion: 2, nombre: "Descuento por Tipo de Negocio en la app", duracion: 37, completado: 100, inicio: "2026-07-27", fin: "2026-09-15", responsable: "Binaural" },
+    { seccion: 2, nombre: "Validación por IT Cambios app ventas móvil", duracion: 37, completado: 100, inicio: "2026-07-27", fin: "2026-09-15", responsable: "IT, Binaural" },
+    
+    { seccion: 3, nombre: "Crear categorías separar premezcla hidradata y secas", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "IT" },
+    { seccion: 3, nombre: "Carga lista de precios, inventario y costos en Odoo", duracion: 1, completado: 100, inicio: "2026-07-27", fin: "2026-07-27", responsable: "IT" },
+    { seccion: 3, nombre: "Desarrollo de flujos de procesos", duracion: 72, completado: 90, inicio: "2026-05-04", fin: "2026-08-11", responsable: "IT" },
+    { seccion: 3, nombre: "Validacion de Flujos de procesos", duracion: 103, completado: 30, inicio: "2026-05-11", fin: "2026-09-30", responsable: "" },
+    { seccion: 3, nombre: "Aprobación key users de todos los flujos de procesos", duracion: 35, completado: 0, inicio: "2026-08-13", fin: "2026-09-30", responsable: "IT, Key Users" },
+    { seccion: 3, nombre: "Desarrollo de Guiones Cronológico de cada Flujo", duracion: 9, completado: 90, inicio: "2026-07-30", fin: "2026-08-11", responsable: "IT" },
+    { seccion: 3, nombre: "Diseño, desarrollo forma libre Guía de Despacho Prov. 0071", duracion: 11, completado: 100, inicio: "2026-07-14", fin: "2026-07-28", responsable: "Binaural" },
+    { seccion: 3, nombre: "Impresión Guía de Desapacho", duracion: 1, completado: 0, inicio: "2026-08-27", fin: "2026-08-27", responsable: "IT" },
+    { seccion: 3, nombre: "Definición Proceso de carga en Odoo motivos N/C financieras y N/D", duracion: 45, completado: 100, inicio: "2026-07-15", fin: "2026-09-15", responsable: "K.Alvarado, J.Morales, Binaural" },
+    { seccion: 3, nombre: "Pruebas ingreso documentos y validación Libro de Ventas / Compras", duracion: 16, completado: 50, inicio: "2026-08-27", fin: "2026-09-17", responsable: "IT" },
+    
+    { seccion: 4, nombre: "Orden Compra Diseño e impresión de forma Libre de Guía de despacho (Moore Proveedor)", duracion: 47, completado: 0, inicio: "2026-08-27", fin: "2026-10-30", responsable: "IT" },
+    { seccion: 4, nombre: "Revisión libro de Ventas / Compras y reportes contables", duracion: 31, completado: 50, inicio: "2026-09-04", fin: "2026-10-16", responsable: "K.Alvarado, J.Morales" },
+    { seccion: 4, nombre: "Entrenamiento a Fuerza de ventas App Ventas Móvil - Nuevas Funcionalidades", duracion: 26, completado: 0, inicio: "2026-09-25", fin: "2026-10-30", responsable: "Binaural;IT,FDV" },
+    { seccion: 4, nombre: "Redactar documento donde quede certificado la validación de los procesos operativos y flujos", duracion: 1, completado: 100, inicio: "2026-08-03", fin: "2026-08-03", responsable: "IT" },
+    { seccion: 4, nombre: "Configuración de Perfiles y accesos", duracion: 12, completado: 0, inicio: "2026-10-01", fin: "2026-10-16", responsable: "IT" },
+    { seccion: 4, nombre: "Diseñar nuevo esquema de ciclo de pruebas integrales END to END", duracion: 48, completado: 40, inicio: "2026-08-12", fin: "2026-10-16", responsable: "IT" },
+    { seccion: 4, nombre: "Planificar con key users de las áreas las pruebas de integración", duracion: 16, completado: 0, inicio: "2026-09-14", fin: "2026-10-05", responsable: "IT, K.User" },
+    { seccion: 4, nombre: "Hacer convocatoria formal a los participantes de las pruebas", duracion: 16, completado: 0, inicio: "2026-09-14", fin: "2026-10-05", responsable: "" },
+    
+    { seccion: 5, nombre: "Order to Cash / Inverso", duracion: 1, completado: 0, inicio: "2026-10-19", fin: "2026-10-19", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Manufactura - Ordenes de Fabricación - Producción - Traslados", duracion: 1, completado: 0, inicio: "2026-10-22", fin: "2026-10-22", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Maquila (Subcontratación)", duracion: 1, completado: 0, inicio: "2026-10-23", fin: "2026-10-23", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Maquila (La Giralda)", duracion: 1, completado: 0, inicio: "2026-10-23", fin: "2026-10-23", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Importaciones", duracion: 1, completado: 0, inicio: "2026-10-26", fin: "2026-10-26", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Solicitudes de Requisiciones / Ordenes de Compra & Servicio", duracion: 1, completado: 0, inicio: "2026-10-26", fin: "2026-10-26", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Venta por Consignación", duracion: 1, completado: 0, inicio: "2026-10-27", fin: "2026-10-27", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Pago de Proveedores / Conciliación", duracion: 1, completado: 0, inicio: "2026-10-28", fin: "2026-10-28", responsable: "IT, Key Users, Usuarios" },
+    { seccion: 5, nombre: "Recepción de Facturas - Retenciones", duracion: 1, completado: 0, inicio: "2026-10-29", fin: "2026-10-29", responsable: "IT, Contabilidad" },
+    { seccion: 5, nombre: "Validación de asientos contables", duracion: 8, completado: 0, inicio: "2026-10-19", fin: "2026-10-28", responsable: "IT" },
+    { seccion: 5, nombre: "Firma y aprobacion KU y GC", duracion: 8, completado: 5, inicio: "2026-10-19", fin: "2026-10-28", responsable: "IT" },
+    
+    { seccion: 6, nombre: "Cierre administrativo y financiero", duracion: 5, completado: 0, inicio: "2027-01-04", fin: "2027-01-08", responsable: "Adm & Finanzas" },
+    { seccion: 6, nombre: "Migración", duracion: 4, completado: 0, inicio: "2027-01-11", fin: "2027-01-14", responsable: "IT, Binaural" },
+    { seccion: 6, nombre: "Salida a Producción", duracion: 1, completado: 1, inicio: "2027-01-15", fin: "2027-01-15", responsable: "IT, Binaural, ALG" },
+    { seccion: 6, nombre: "Paralelo", duracion: 16, completado: 0, inicio: "2027-01-15", fin: "2027-02-05", responsable: "IT, ALG" }
+];
+
+const nombresSecciones = {
+    1: "Resolución de Incidencias",
+    2: "Cambios en la App de Ventas",
+    3: "Actividades de Odoo en Proceso",
+    4: "Próximas Actividades Odoo",
+    5: "Pruebas / Ciclo de Validación",
+    6: "Fechas Propuesta Go Live"
+};
+
+let tareas = [];
+function cargarDatos() {
+    const guardados = localStorage.getItem('odoo_tareas');
+    if (guardados) {
+        tareas = JSON.parse(guardados);
+    } else {
+        tareas = JSON.parse(JSON.stringify(datosIniciales));
+    }
+}
+
+function guardarDatos() {
+    localStorage.setItem('odoo_tareas', JSON.stringify(tareas));
+}
+
+// ============ FORMATO DE FECHA (Día-Mes-Año) ============
+function formatearFecha(fechaStr) {
+    if (!fechaStr) return '-';
+    const partes = fechaStr.split('-');
+    if (partes.length !== 3) return fechaStr;
+    return `${partes[2]}-${partes[1]}-${partes[0]}`;
+}
+
+function cambiarTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'dashboard') actualizarDashboard();
+}
+
+function mostrarToast(msg, tipo = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show ' + tipo;
+    setTimeout(() => toast.className = 'toast', 3000);
+}
+
+// ============ CÁLCULO DE DÍAS HÁBILES ============
+function calcularDiasHabiles(fechaInicioStr, fechaFinStr) {
+    if (!fechaInicioStr || !fechaFinStr) return 0;
+    const inicio = new Date(fechaInicioStr + 'T00:00:00');
+    const fin = new Date(fechaFinStr + 'T00:00:00');
+    if (isNaN(inicio) || isNaN(fin)) return 0;
+    
+    let dias = 0;
+    const actual = new Date(inicio);
+    while (actual <= fin) {
+        const diaSemana = actual.getDay();
+        if (diaSemana !== 0 && diaSemana !== 6) {
+            dias++;
+        }
+        actual.setDate(actual.getDate() + 1);
+    }
+    return dias;
+}
+
+// ============ RENDERIZAR TABLA EDITABLE ============
+function renderizarTabla() {
+    const tbody = document.getElementById('tbody-tareas');
+    tbody.innerHTML = '';
+    
+    let num = 1;
+    let seccionActual = 0;
+    const tareasOrdenadas = [...tareas].sort((a, b) => a.seccion - b.seccion);
+    
+    tareasOrdenadas.forEach((t, idx) => {
+        if (t.seccion !== seccionActual) {
+            seccionActual = t.seccion;
+            const tr = document.createElement('tr');
+            tr.className = 'section-row';
+            tr.innerHTML = `<td colspan="9"><strong>📁 ${nombresSecciones[t.seccion]}</strong></td>`;
+            tbody.appendChild(tr);
+        }
+        
+        const estado = t.completado === 100 ? 'completed' : t.completado > 0 ? 'progress' : 'pending';
+        const estadoTexto = t.completado === 100 ? 'Completada' : t.completado > 0 ? 'En Progreso' : 'Pendiente';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${num++}</td>
+            <td contenteditable="true" onblur="actualizarCampo(${idx}, 'nombre', this.textContent)">${t.nombre}</td>
+            <td id="dur-${idx}" contenteditable="true" onblur="actualizarCampo(${idx}, 'duracion', this.textContent)">${t.duracion}</td>
+            <td contenteditable="true" onblur="actualizarCampo(${idx}, 'completado', this.textContent)">
+                ${t.completado}%
+                <div class="progress-bar-mini"><div class="progress-fill-mini" style="width:${t.completado}%">${t.completado}%</div></div>
+            </td>
+            <td contenteditable="true" onblur="actualizarFecha(${idx}, 'inicio', this.textContent)">${formatearFecha(t.inicio)}</td>
+            <td contenteditable="true" onblur="actualizarFecha(${idx}, 'fin', this.textContent)">${formatearFecha(t.fin)}</td>
+            <td contenteditable="true" onblur="actualizarCampo(${idx}, 'responsable', this.textContent)">${t.responsable}</td>
+            <td><span class="status-badge status-${estado}">${estadoTexto}</span></td>
+            <td><button class="action-btn delete" onclick="eliminarTarea(${idx})">️</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function actualizarCampo(idx, campo, valor) {
+    const tareasOrdenadas = [...tareas].sort((a, b) => a.seccion - b.seccion);
+    const tarea = tareasOrdenadas[idx];
+    if (!tarea) return;
+    
+    if (campo === 'duracion') {
+        valor = parseFloat(valor.replace(/[^\d.]/g, '')) || 0;
+    } else if (campo === 'completado') {
+        valor = parseFloat(valor.replace('%', '').replace(',', '.')) || 0;
+        valor = Math.min(100, Math.max(0, valor));
+    }
+    
+    tarea[campo] = valor;
+    guardarDatos();
+    renderizarTabla();
+    mostrarToast('✅ Cambios guardados automáticamente');
+}
+
+function actualizarFecha(idx, campo, valor) {
+    const tareasOrdenadas = [...tareas].sort((a, b) => a.seccion - b.seccion);
+    const tarea = tareasOrdenadas[idx];
+    if (!tarea) return;
+    
+    valor = valor.trim();
+    
+    // Aceptar formato DD-MM-YYYY y convertir a YYYY-MM-DD
+    const regexDMY = /^\d{2}-\d{2}-\d{4}$/;
+    const regexYMD = /^\d{4}-\d{2}-\d{2}$/;
+    
+    let fechaYMD = valor;
+    if (regexDMY.test(valor)) {
+        const partes = valor.split('-');
+        fechaYMD = `${partes[2]}-${partes[1]}-${partes[0]}`;
+    } else if (!regexYMD.test(valor)) {
+        mostrarToast('⚠️ Formato inválido. Use DD-MM-YYYY o YYYY-MM-DD', 'warning');
+        renderizarTabla();
+        return;
+    }
+    
+    const fecha = new Date(fechaYMD + 'T00:00:00');
+    if (isNaN(fecha)) {
+        mostrarToast('⚠️ Fecha inválida', 'warning');
+        renderizarTabla();
+        return;
+    }
+    
+    tarea[campo] = fechaYMD;
+    
+    if (tarea.inicio && tarea.fin) {
+        const diasHabiles = calcularDiasHabiles(tarea.inicio, tarea.fin);
+        tarea.duracion = diasHabiles;
+        mostrarToast(`✅ Fecha actualizada. Duración: ${diasHabiles} días hábiles`);
+    } else {
+        mostrarToast('✅ Fecha actualizada');
+    }
+    
+    guardarDatos();
+    renderizarTabla();
+}
+
+function eliminarTarea(idx) {
+    if (!confirm('¿Eliminar esta tarea?')) return;
+    const tareasOrdenadas = [...tareas].sort((a, b) => a.seccion - b.seccion);
+    const tarea = tareasOrdenadas[idx];
+    const realIdx = tareas.indexOf(tarea);
+    tareas.splice(realIdx, 1);
+    guardarDatos();
+    renderizarTabla();
+    mostrarToast('🗑️ Tarea eliminada', 'warning');
+}
+
+function abrirModal() {
+    document.getElementById('modalOverlay').classList.add('active');
+    document.getElementById('formInicio').value = new Date().toISOString().split('T')[0];
+    document.getElementById('formFin').value = new Date().toISOString().split('T')[0];
+}
+
+function cerrarModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function guardarTarea() {
+    const nueva = {
+        seccion: parseInt(document.getElementById('formSeccion').value),
+        nombre: document.getElementById('formNombre').value.trim(),
+        duracion: parseFloat(document.getElementById('formDuracion').value) || 1,
+        completado: parseFloat(document.getElementById('formCompletado').value) || 0,
+        inicio: document.getElementById('formInicio').value,
+        fin: document.getElementById('formFin').value,
+        responsable: document.getElementById('formResponsable').value.trim()
+    };
+    
+    if (!nueva.nombre) {
+        mostrarToast('️ El nombre es obligatorio', 'error');
+        return;
+    }
+    
+    if (nueva.inicio && nueva.fin) {
+        nueva.duracion = calcularDiasHabiles(nueva.inicio, nueva.fin);
+    }
+    
+    tareas.push(nueva);
+    guardarDatos();
+    renderizarTabla();
+    cerrarModal();
+    mostrarToast('✅ Tarea agregada correctamente');
+    
+    document.getElementById('formNombre').value = '';
+    document.getElementById('formResponsable').value = '';
+}
+
+function exportarJSON() {
+    const data = JSON.stringify(tareas, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `odoo_tareas_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    mostrarToast('📥 Datos exportados correctamente');
+}
+
+function importarJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            tareas = JSON.parse(e.target.result);
+            guardarDatos();
+            renderizarTabla();
+            mostrarToast('📤 Datos importados correctamente');
+        } catch (err) {
+            mostrarToast('❌ Error al importar archivo', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function resetearDatos() {
+    if (!confirm('¿Restaurar datos originales? Se perderán los cambios.')) return;
+    localStorage.removeItem('odoo_tareas');
+    cargarDatos();
+    renderizarTabla();
+    mostrarToast('🔄 Datos restaurados', 'warning');
+}
+
+// ============ CÁLCULO DE PROMEDIOS POR SECCIÓN ============
+function calcularPromediosPorSeccion() {
+    const resultados = {};
+    for (let i = 1; i <= 6; i++) {
+        const tareasSeccion = tareas.filter(t => t.seccion === i);
+        if (tareasSeccion.length === 0) {
+            resultados[i] = { promedio: 0, cantidad: 0, fechaInicio: '-', fechaFin: '-' };
+            continue;
+        }
+        
+        const sumaPorcentajes = tareasSeccion.reduce((acc, t) => acc + t.completado, 0);
+        const promedio = sumaPorcentajes / tareasSeccion.length;
+        
+        const fechasInicio = tareasSeccion.map(t => new Date(t.inicio + 'T00:00:00')).filter(d => !isNaN(d));
+        const fechasFin = tareasSeccion.map(t => new Date(t.fin + 'T00:00:00')).filter(d => !isNaN(d));
+        
+        const fechaInicio = fechasInicio.length > 0 ? new Date(Math.min(...fechasInicio)) : null;
+        const fechaFin = fechasFin.length > 0 ? new Date(Math.max(...fechasFin)) : null;
+        
+        resultados[i] = {
+            promedio: promedio,
+            cantidad: tareasSeccion.length,
+            fechaInicio: fechaInicio ? fechaInicio.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+            fechaFin: fechaFin ? fechaFin.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'
+        };
+    }
+    return resultados;
+}
+
+// ============ DASHBOARD KPIs ============
+let chartFases, chartEstado, chartResponsables, chartCronograma;
+
+function actualizarDashboard() {
+    const hoy = new Date();
+    const totalTareas = tareas.length;
+    const completadas = tareas.filter(t => t.completado === 100).length;
+    const enProgreso = tareas.filter(t => t.completado > 0 && t.completado < 100).length;
+    const pendientes = tareas.filter(t => t.completado === 0).length;
+    
+    const totalDuracion = tareas.reduce((acc, t) => acc + t.duracion, 0);
+    const progresoPonderado = tareas.reduce((acc, t) => acc + (t.duracion * t.completado / 100), 0);
+    const progresoGlobal = totalDuracion > 0 ? (progresoPonderado / totalDuracion) * 100 : 0;
+    
+    const fechaInicio = new Date('2026-05-04');
+    const diasTranscurridos = Math.max(0, (hoy - fechaInicio) / (1000 * 60 * 60 * 24));
+    const duracionTotal = 277;
+    const progresoEsperado = (diasTranscurridos / duracionTotal) * 100;
+    const spi = progresoEsperado > 0 ? progresoGlobal / progresoEsperado : 0;
+    
+    const tareasEnRiesgo = tareas.filter(t => {
+        const fin = new Date(t.fin + 'T00:00:00');
+        return fin < hoy && t.completado < 100;
+    });
+    
+    document.getElementById('kpi-spi').textContent = spi.toFixed(2);
+    document.getElementById('kpi-completadas').textContent = completadas;
+    document.getElementById('label-completadas').textContent = `de ${totalTareas} tareas`;
+    document.getElementById('kpi-progreso-tareas').textContent = enProgreso;
+    document.getElementById('kpi-pendientes').textContent = pendientes;
+    document.getElementById('kpi-dias').textContent = Math.floor(diasTranscurridos);
+    document.getElementById('kpi-riesgo').textContent = tareasEnRiesgo.length;
+    
+    const promedios = calcularPromediosPorSeccion();
+    const valoresPromedios = [1,2,3,4,5,6].map(i => promedios[i].promedio);
+    const avanceTotal = valoresPromedios.reduce((a, b) => a + b, 0) / 6;
+    document.getElementById('kpi-avance-total').textContent = avanceTotal.toFixed(1) + '%';
+    
+    // Renderizar Alertas
+    const alertasContainer = document.getElementById('alertas-container');
+    if (tareasEnRiesgo.length === 0) {
+        alertasContainer.innerHTML = '<div class="alerta-item success">✅ No hay tareas vencidas sin completar.</div>';
+    } else {
+        alertasContainer.innerHTML = `<div class="alerta-item"><strong>🚨 ${tareasEnRiesgo.length} tareas vencidas</strong> requieren atención inmediata</div>`;
+        tareasEnRiesgo.forEach(t => {
+            const alerta = document.createElement('div');
+            alerta.className = 'alerta-item';
+            alerta.innerHTML = `<strong>${t.nombre}</strong> — ${t.completado}% completado — Fin: ${formatearFecha(t.fin)} — Responsable: ${t.responsable || 'Sin asignar'}`;
+            alertasContainer.appendChild(alerta);
+        });
+    }
+    
+    // Renderizar Detalle de Tareas (filtro "todas" por defecto)
+    renderizarDetalleTareas('todas');
+    
+    actualizarGraficos(promedios, completadas, enProgreso, pendientes, progresoGlobal);
+}
+
+function renderizarDetalleTareas(filtro) {
+    const tbody = document.getElementById('tbody-detalle');
+    tbody.innerHTML = '';
+    
+    let tareasFiltradas = [...tareas].sort((a, b) => a.seccion - b.seccion);
+    
+    if (filtro === 'completadas') tareasFiltradas = tareasFiltradas.filter(t => t.completado === 100);
+    else if (filtro === 'progreso') tareasFiltradas = tareasFiltradas.filter(t => t.completado > 0 && t.completado < 100);
+    else if (filtro === 'pendientes') tareasFiltradas = tareasFiltradas.filter(t => t.completado === 0);
+    else if (filtro === 'criticas') {
+        const hoy = new Date();
+        tareasFiltradas = tareasFiltradas.filter(t => {
+            const fin = new Date(t.fin + 'T00:00:00');
+            return fin < hoy && t.completado < 100;
+        });
+    }
+    
+    tareasFiltradas.forEach((t, idx) => {
+        const estado = t.completado === 100 ? 'completed' : t.completado > 0 ? 'progress' : 'pending';
+        const estadoTexto = t.completado === 100 ? 'Completada' : t.completado > 0 ? 'En Progreso' : 'Pendiente';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${idx + 1}</td>
+            <td>${t.nombre}</td>
+            <td>${t.responsable || 'Sin asignar'}</td>
+            <td>${t.duracion} días</td>
+            <td>${formatearFecha(t.inicio)}</td>
+            <td>${formatearFecha(t.fin)}</td>
+            <td>
+                <div class="progress-bar-mini" style="width:100px">
+                    <div class="progress-fill-mini" style="width:${t.completado}%">${t.completado}%</div>
+                </div>
+            </td>
+            <td><span class="status-badge status-${estado}">${estadoTexto}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filtrarTareas(filtro, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderizarDetalleTareas(filtro);
+}
+
+function actualizarGraficos(promedios, completadas, enProgreso, pendientes, progresoGlobal) {
+    const paleta = ['#7EB5D6', '#9B8EC4', '#B8A9C9', '#A8C8E0', '#C4B7D4', '#D4A5C4'];
+    
+    if (chartFases) chartFases.destroy();
+    if (chartEstado) chartEstado.destroy();
+    if (chartResponsables) chartResponsables.destroy();
+    if (chartCronograma) chartCronograma.destroy();
+    
+    chartFases = new Chart(document.getElementById('chartFases'), {
+        type: 'bar',
+        data: {
+            labels: [1,2,3,4,5,6].map(i => nombresSecciones[i]),
+            datasets: [{
+                label: 'Promedio % de Avance',
+                data: [1,2,3,4,5,6].map(i => promedios[i].promedio),
+                backgroundColor: paleta,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const idx = context.dataIndex + 1;
+                            const p = promedios[idx];
+                            return [
+                                `📊 ${p.cantidad} actividades`,
+                                ` Inicio: ${p.fechaInicio}`,
+                                `📅 Fin: ${p.fechaFin}`
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    chartEstado = new Chart(document.getElementById('chartEstado'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Completadas', 'En Progreso', 'Pendientes'],
+            datasets: [{
+                data: [completadas, enProgreso, pendientes],
+                backgroundColor: ['#7EB5D6', '#B8A9C9', '#D4A5C4'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '50%',
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+    
+    const responsables = {};
+    tareas.forEach(t => {
+        if (t.responsable) {
+            t.responsable.split(/[,;]/).forEach(r => {
+                r = r.trim();
+                if (r) responsables[r] = (responsables[r] || 0) + 1;
+            });
+        }
+    });
+    const respOrdenados = Object.entries(responsables).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    
+    chartResponsables = new Chart(document.getElementById('chartResponsables'), {
+        type: 'bar',
+        data: {
+            labels: respOrdenados.map(r => r[0]),
+            datasets: [{
+                data: respOrdenados.map(r => r[1]),
+                backgroundColor: paleta.slice(0, respOrdenados.length),
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true } }
+        }
+    });
+    
+    const meses = ['May 26', 'Jun 26', 'Jul 26', 'Ago 26', 'Sep 26', 'Oct 26', 'Nov 26', 'Dic 26', 'Ene 27', 'Feb 27'];
+    const planificado = [10, 35, 65, 73, 82, 88, 91, 94, 97, 100];
+    const real = [0, 25, 55, progresoGlobal, progresoGlobal, progresoGlobal, progresoGlobal, progresoGlobal, progresoGlobal, progresoGlobal];
+    
+    chartCronograma = new Chart(document.getElementById('chartCronograma'), {
+        type: 'line',
+        data: {
+            labels: meses,
+            datasets: [
+                { label: 'Planificado %', data: planificado, borderColor: '#7EB5D6', backgroundColor: 'rgba(126,181,214,0.1)', fill: true, tension: 0.4, borderDash: [5,5] },
+                { label: 'Real %', data: real, borderColor: '#9B8EC4', backgroundColor: 'rgba(155,142,196,0.1)', fill: true, tension: 0.1 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, max: 100 } },
+            plugins: { legend: { labels: { usePointStyle: true } } }
+        }
+    });
+}
+
+cargarDatos();
+renderizarTabla();
+</script>
+</body>
+</html>
